@@ -7,7 +7,7 @@ import json
 
 TELEGRAM_BOT_TOKEN = os.getenv('TELEGRAM_BOT_TOKEN')
 TELEGRAM_CHAT_ID = os.getenv('TELEGRAM_CHAT_ID')
-SHEET_VIEW_URL = os.getenv('SHEET_VIEW_URL')  # This should be the view-only URL (with edit#gid=...)
+SHEET_VIEW_URL = os.getenv('SHEET_VIEW_URL')  # view-only URL ending with /edit#gid=
 
 cells_to_monitor = {
     'C57': 'Strawberry Kiwi',
@@ -57,13 +57,12 @@ def check_changes():
             emoji = status_emojis.get(current_value, '❔')
 
             if current_value != last_values.get(cell):
-                updates.append(
-                    f"🔔 *Status change for {product_name}*
-"
-                    f"Previous: `{last_values.get(cell)}`
-"
+                message = (
+                    f"🔔 *Status change for {product_name}*\n"
+                    f"Previous: `{last_values.get(cell)}`\n"
                     f"Now: {emoji} *{current_value}*"
                 )
+                updates.append(message)
                 last_values[cell] = current_value
 
         if updates:
