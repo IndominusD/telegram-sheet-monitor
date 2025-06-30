@@ -75,22 +75,25 @@ async def fetch_statuses():
             for wrong, right in corrections.items():
                 ocr_text = ocr_text.replace(wrong, right)
 
-            lines = ocr_text.splitlines()
+            # Prepare line list
+            lines = [line.strip() for line in ocr_text.splitlines() if line.strip()]
 
             found = {}
             for cell, product in cells_to_monitor.items():
                 matched_status = None
-                for line in lines:
+                for i, line in enumerate(lines):
                     if product in line:
+                        # Search nearby lines (±3) for status
+                        context_block = " ".join(lines[max(0, i - 2): i + 4])
                         for status in status_emojis:
-                            if status in line:
+                            if status in context_block:
                                 matched_status = status
                                 break
                         if matched_status:
                             break
                 if matched_status:
                     found[cell] = matched_status
-                    print(f"🧠 OCR matched '{product}' → {matched_status}")
+                    print(f"🧠 OCR context matched '{product}' → {matched_status}")
                 else:
                     found[cell] = None
                     print(f"❌ OCR could not find '{product}'")
