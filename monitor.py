@@ -11,9 +11,9 @@ TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
 SHEET_VIEW_URL = os.getenv("SHEET_VIEW_URL")
 
 cells_to_monitor = {
-    "C57": "STRAWBERRY KIWI (FROZEN)",
-    "C59": "TIE GUAN YIN (FROZEN)",
-    "C60": "WATERMELON (FROZEN)",
+    "C57": "KIWI",
+    "C59": "TIE GUAN YIN",
+    "C60": "WATERMELON",
 }
 
 status_emojis = {
@@ -58,6 +58,8 @@ async def fetch_statuses():
         # 🔠 OCR fallback
         try:
             ocr_text = pytesseract.image_to_string(Image.open("debug.png")).upper()
+            with open("ocr_output.txt", "w") as f:
+                f.write(ocr_text)
             lines = ocr_text.splitlines()
 
             found = {}
