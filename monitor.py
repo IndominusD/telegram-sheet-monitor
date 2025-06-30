@@ -52,32 +52,26 @@ async def fetch_statuses():
             return {cell: None for cell in cells_to_monitor}
 
         found = {}
-        for cell, product in cells_to_monitor.items():
-            try:
-                # Fuzzy match using all visible divs
-                all_text_elements = await page.locator("div").all()
-                target_element = None
-                for el in all_text_elements:
-                    text = (await el.text_content() or "").strip()
-                    if product.upper() in text.upper():
-                        target_element = el
-                        break
+        # Extract all visible text
+        visible_text = await page.evaluate("() => document.body.innerText")
+        lines = visible_text.upper().splitlines()
 
-                if target_element:
-                    row_text = await target_element.evaluate('node => node.parentElement?.innerText || ""')
-                    matched_status = None
+        for cell, product in cells_to_monitor.items():
+            matched_status = None
+            for line in lines:
+                if product.upper() in line:
                     for status in status_emojis:
-                        if status in row_text.upper():
+                        if status in line:
                             matched_status = status
                             break
-                    found[cell] = matched_status
-                    print(f"🔍 Found '{product}' → status: {matched_status or 'Not detected'}")
-                else:
-                    found[cell] = None
-                    print(f"❌ Could not find product '{product}'")
-            except Exception as e:
+                    if matched_status:
+                        break
+            if matched_status:
+                found[cell] = matched_status
+                print(f"🔍 Matched '{product}' → {matched_status}")
+            else:
                 found[cell] = None
-                print(f"❌ Error locating '{product}': {e}")
+                print(f"❌ Could not find product '{product}'")
 
         await browser.close()
         return found
