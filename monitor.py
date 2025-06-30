@@ -7,7 +7,7 @@ import json
 
 TELEGRAM_BOT_TOKEN = os.getenv('TELEGRAM_BOT_TOKEN')
 TELEGRAM_CHAT_ID = os.getenv('TELEGRAM_CHAT_ID')
-SHEET_VIEW_URL = os.getenv('SHEET_VIEW_URL')  # view-only URL ending with /edit#gid=
+SHEET_VIEW_URL = os.getenv('SHEET_VIEW_URL')  # Google Sheet view-only link ending in /edit#gid=...
 
 cells_to_monitor = {
     'C57': 'Strawberry Kiwi',
@@ -18,6 +18,7 @@ cells_to_monitor = {
 status_emojis = {
     'AVAILABLE': '🟢',
     'LOW': '🟡',
+    'OUT': '🔴',
     'OUT OF STOCK': '🔴'
 }
 
@@ -38,12 +39,18 @@ def fetch_html_cells():
     soup = BeautifulSoup(response.text, 'html.parser')
 
     cell_data = {}
-    for cell in cells_to_monitor:
-        match = soup.find(text=re.compile(f'{cell}', re.IGNORECASE))
-        if match:
-            cell_data[cell] = match.strip().upper()
-        else:
-            cell_data[cell] = None
+    # Search all divs with aria-label
+    cell_divs = soup.find_all("div", attrs={"aria-label": True})
+
+    for cell, product_name in cells_to_monitor.items():
+        matched = None
+        for div in cell_divs:
+            label = div["aria-label"].strip().upper()
+            if product_name.upper() in label and any(status in label for status in status_emojis):
+                matched = label
+                break
+        cell_data[cell] = matched
+
     return cell_data
 
 def check_changes():
