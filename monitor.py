@@ -63,7 +63,7 @@ def check_changes():
             current_value = current_data[cell].split()[0] if current_data[cell] else ''
             emoji = status_emojis.get(current_value, '❔')
 
-            if current_value != last_values.get(cell):
+            if last_values.get(cell) is None or current_value != last_values.get(cell):
                 message = (
                     f"🔔 *Status change for {product_name}*\n"
                     f"Previous: `{last_values.get(cell)}`\n"
