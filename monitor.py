@@ -42,6 +42,9 @@ def check_sheet():
     global last_values
     try:
         response = requests.get(CSV_URL)
+        print("✅ HTTP status:", response.status_code)
+        print("✅ Content-Type:", response.headers.get("Content-Type", "N/A"))
+        print("✅ Snippet:", response.text[:300])
         data = pd.read_csv(StringIO(response.text), header=None)
         print("✅ CSV shape:", data.shape)
         print(data.head(10))
