@@ -37,11 +37,13 @@ async def fetch_statuses():
         try:
             await page.goto(SHEET_VIEW_URL, wait_until="domcontentloaded", timeout=60000)
             await page.wait_for_timeout(5000)
-                # ⬇️ Scroll the page to reveal rows near C60
+
+            # Scroll to reveal rows C57–C60
             await page.keyboard.press("PageDown")
             await page.wait_for_timeout(1000)
             await page.keyboard.press("PageDown")
             await page.wait_for_timeout(3000)
+
             await page.screenshot(path="debug.png", full_page=True)
             print("📸 Screenshot after scroll saved as debug.png")
         except Exception as e:
@@ -52,11 +54,17 @@ async def fetch_statuses():
         found = {}
         for cell, product in cells_to_monitor.items():
             try:
-                locator = page.locator(f'text-matches("{product}", "i")')
-                element = await locator.first.element_handle()
-                if element:
-                    # Get surrounding text (simulate "cell row")
-                    row_text = await element.evaluate('node => node.parentElement?.innerText || ""')
+                # Fuzzy match using all visible divs
+                all_text_elements = await page.locator("div").all()
+                target_element = None
+                for el in all_text_elements:
+                    text = (await el.text_content() or "").strip()
+                    if product.upper() in text.upper():
+                        target_element = el
+                        break
+
+                if target_element:
+                    row_text = await target_element.evaluate('node => node.parentElement?.innerText || ""')
                     matched_status = None
                     for status in status_emojis:
                         if status in row_text.upper():
