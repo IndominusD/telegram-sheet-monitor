@@ -55,7 +55,7 @@ def check_sheet():
         if updates:
             bot.send_message(chat_id=TELEGRAM_CHAT_ID, text="\n\n".join(updates), parse_mode='Markdown')
 
-        # Save updated status
+        # ✅ Always write the status file (even if no updates)
         with open(status_file, 'w') as f:
             json.dump(last_values, f, indent=2)
 
