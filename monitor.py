@@ -10,10 +10,11 @@ TELEGRAM_CHAT_ID = os.getenv('TELEGRAM_CHAT_ID')
 SHEET_VIEW_URL = os.getenv('SHEET_VIEW_URL')  # Google Sheet view-only link ending in /edit#gid=...
 
 cells_to_monitor = {
-    'C57': 'Strawberry Kiwi',
-    'C59': 'Tie Guan Yin',
-    'C60': 'Watermelon',
+    'C57': 'STRAWBERRY KIWI (FROZEN)',
+    'C59': 'TIE GUAN YIN (FROZEN)',
+    'C60': 'WATERMELON (FROZEN)',
 }
+
 
 status_emojis = {
     'AVAILABLE': '🟢',
