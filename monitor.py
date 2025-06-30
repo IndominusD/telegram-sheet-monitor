@@ -41,10 +41,10 @@ bot = Bot(token=TELEGRAM_BOT_TOKEN)
 def check_sheet():
     global last_values
     try:
-        response = requests.get(CSV_URL)
-        print("✅ HTTP status:", response.status_code)
-        print("✅ Content-Type:", response.headers.get("Content-Type", "N/A"))
-        print("✅ Snippet:", response.text[:300])
+        headers = {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"
+        }
+        response = requests.get(CSV_URL, headers=headers)
         data = pd.read_csv(StringIO(response.text), header=None)
         print("✅ CSV shape:", data.shape)
         print(data.head(10))
