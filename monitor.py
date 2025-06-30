@@ -36,6 +36,8 @@ def check_sheet():
     try:
         response = requests.get(CSV_URL)
         data = pd.read_csv(StringIO(response.text), header=None)
+        print("✅ CSV shape:", data.shape)
+        print(data.head(10))
 
         updates = []
 
