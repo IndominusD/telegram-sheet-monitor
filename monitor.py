@@ -106,13 +106,20 @@ async def check_changes():
             last_values = json.load(f)
     else:
         last_values = {cell: None for cell in cells_to_monitor}
+
+    # Show previous values
+    print("📂 Last saved statuses (from status.json):")
+    for cell, value in last_values.items():
+        label = cells_to_monitor.get(cell, cell)
+        print(f"  {cell} ({label}): {value if value else '❌ Not recorded'}")
         
     try:
         current_data = await fetch_statuses()
 
         print("📋 Current visible statuses:")
         for cell, raw in current_data.items():
-            print(f"  {cell} ({cells_to_monitor[cell]}): {raw if raw else '❌ Not found'}")
+            label = cells_to_monitor.get(cell,cell)
+            print(f"  {cell} ({label}): {raw if raw else '❌ Not found'}")
 
         updates = []
 
@@ -129,7 +136,10 @@ async def check_changes():
                 last_values[cell] = current_value
 
         if updates:
+            print("📨 Sending Telegram alert")
             bot.send_message(chat_id=TELEGRAM_CHAT_ID, text="\n\n".join(updates), parse_mode="Markdown")
+        else:
+            print("✅ No changes, no alert will be sent.")
 
         with open(status_file, "w") as f:
             json.dump(last_values, f, indent=2)
