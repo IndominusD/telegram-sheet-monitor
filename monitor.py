@@ -36,27 +36,34 @@ async def fetch_statuses():
         page = await browser.new_page()
         try:
             await page.goto(SHEET_VIEW_URL, wait_until="domcontentloaded", timeout=60000)
-            await page.wait_for_timeout(5000)  # Let sheet fully render after DOM load
+            await page.wait_for_timeout(5000)
+            await page.screenshot(path="debug.png", full_page=True)
         except Exception as e:
             print(f"❌ Failed to load sheet: {e}")
             await browser.close()
             return {cell: None for cell in cells_to_monitor}
 
-
-        content = await page.content()
-
         found = {}
         for cell, product in cells_to_monitor.items():
-            if product.upper() in content.upper():
-                snippet = content.upper().split(product.upper(), 1)[-1][:80]
-                for status in status_emojis:
-                    if status in snippet:
-                        found[cell] = f"{status}"
-                        break
+            try:
+                locator = page.locator(f'text="{product}"')
+                element = await locator.first.element_handle()
+                if element:
+                    # Get surrounding text (simulate "cell row")
+                    row_text = await element.evaluate('node => node.parentElement?.innerText || ""')
+                    matched_status = None
+                    for status in status_emojis:
+                        if status in row_text.upper():
+                            matched_status = status
+                            break
+                    found[cell] = matched_status
+                    print(f"🔍 Found '{product}' → status: {matched_status or 'Not detected'}")
                 else:
                     found[cell] = None
-            else:
+                    print(f"❌ Could not find product '{product}'")
+            except Exception as e:
                 found[cell] = None
+                print(f"❌ Error locating '{product}': {e}")
 
         await browser.close()
         return found
