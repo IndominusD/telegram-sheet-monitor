@@ -1,96 +1,94 @@
-import requests
-from bs4 import BeautifulSoup
-from telegram import Bot
-import os
-import re
+import asyncio
 import json
+import os
+from telegram import Bot
+from playwright.async_api import async_playwright
 
-TELEGRAM_BOT_TOKEN = os.getenv('TELEGRAM_BOT_TOKEN')
-TELEGRAM_CHAT_ID = os.getenv('TELEGRAM_CHAT_ID')
-SHEET_VIEW_URL = os.getenv('SHEET_VIEW_URL')  # Google Sheet view-only link ending in /edit#gid=...
+TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
+TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
+SHEET_VIEW_URL = os.getenv("SHEET_VIEW_URL")
 
 cells_to_monitor = {
-    'C57': 'STRAWBERRY KIWI (FROZEN)',
-    'C59': 'TIE GUAN YIN (FROZEN)',
-    'C60': 'WATERMELON (FROZEN)',
+    "C57": "Strawberry Kiwi",
+    "C59": "Tie Guan Yin",
+    "C60": "Watermelon",
 }
-
 
 status_emojis = {
-    'AVAILABLE': '🟢',
-    'LOW': '🟡',
-    'OUT': '🔴',
-    'OUT OF STOCK': '🔴'
+    "AVAILABLE": "🟢",
+    "LOW": "🟡",
+    "OUT": "🔴",
+    "OUT OF STOCK": "🔴"
 }
 
-status_file = 'status.json'
+status_file = "status.json"
 if os.path.exists(status_file):
-    with open(status_file, 'r') as f:
+    with open(status_file, "r") as f:
         last_values = json.load(f)
 else:
     last_values = {cell: None for cell in cells_to_monitor}
 
 bot = Bot(token=TELEGRAM_BOT_TOKEN)
 
-def fetch_html_cells():
-    headers = {
-        "User-Agent": "Mozilla/5.0"
-    }
-    response = requests.get(SHEET_VIEW_URL, headers=headers)
-    soup = BeautifulSoup(response.text, 'html.parser')
+async def fetch_statuses():
+    async with async_playwright() as p:
+        browser = await p.chromium.launch(headless=True)
+        page = await browser.new_page()
+        await page.goto(SHEET_VIEW_URL, wait_until="networkidle")
+        await page.wait_for_timeout(3000)  # Wait for rendering
 
-    cell_data = {}
-    # Search all divs with aria-label
-    cell_divs = soup.find_all("div", attrs={"aria-label": True})
-    print("🔍 Found aria-labels:")
-    for div in cell_divs[:50]:  # limit to first 50 for sanity
-        print("-", div["aria-label"])
+        content = await page.content()
 
-    for cell, product_name in cells_to_monitor.items():
-        matched = None
-        for div in cell_divs:
-            label = div["aria-label"].strip().upper()
-            if product_name.upper() in label and any(status in label for status in status_emojis):
-                matched = label
-                break
-        cell_data[cell] = matched
+        found = {}
+        for cell, product in cells_to_monitor.items():
+            if product.upper() in content.upper():
+                snippet = content.upper().split(product.upper(), 1)[-1][:80]
+                for status in status_emojis:
+                    if status in snippet:
+                        found[cell] = f"{status}"
+                        break
+                else:
+                    found[cell] = None
+            else:
+                found[cell] = None
 
-    return cell_data
+        await browser.close()
+        return found
 
-def check_changes():
+async def check_changes():
     global last_values
+    print("📡 Launching headless browser...")
     try:
-        current_data = fetch_html_cells()
-        print("📋 Current scraped statuses:")
-        for cell, product_name in cells_to_monitor.items():
-            raw = current_data[cell]
-            preview = raw if raw else "❌ Not found"
-            print(f"  {cell} ({product_name}): {preview}")
+        current_data = await fetch_statuses()
+
+        print("📋 Current visible statuses:")
+        for cell, raw in current_data.items():
+            print(f"  {cell} ({cells_to_monitor[cell]}): {raw if raw else '❌ Not found'}")
+
         updates = []
 
         for cell, product_name in cells_to_monitor.items():
-            current_value = current_data[cell].split()[0] if current_data[cell] else ''
-            emoji = status_emojis.get(current_value, '❔')
+            current_value = current_data[cell]
+            emoji = status_emojis.get(current_value, "❔")
 
             if last_values.get(cell) is None or current_value != last_values.get(cell):
-                message = (
+                updates.append(
                     f"🔔 *Status change for {product_name}*\n"
                     f"Previous: `{last_values.get(cell)}`\n"
-                    f"Now: {emoji} *{current_value}*"
+                    f"Now: {emoji} *{current_value or 'UNKNOWN'}*"
                 )
-                updates.append(message)
                 last_values[cell] = current_value
 
         if updates:
-            bot.send_message(chat_id=TELEGRAM_CHAT_ID, text="\n\n".join(updates), parse_mode='Markdown')
+            bot.send_message(chat_id=TELEGRAM_CHAT_ID, text="\n\n".join(updates), parse_mode="Markdown")
 
-        with open(status_file, 'w') as f:
+        with open(status_file, "w") as f:
             json.dump(last_values, f, indent=2)
 
     except Exception as e:
-        print(f"Error scraping sheet: {e}")
+        print(f"❌ Error in check_changes: {e}")
 
 if __name__ == "__main__":
     from time import strftime
     print(f"📡 Checking for status changes at {strftime('%Y-%m-%d %H:%M:%S')}")
-    check_changes()
+    asyncio.run(check_changes())
