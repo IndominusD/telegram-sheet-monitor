@@ -1,25 +1,18 @@
-import pandas as pd
 import requests
-from io import StringIO
+from bs4 import BeautifulSoup
 from telegram import Bot
 import os
+import re
 import json
 
 TELEGRAM_BOT_TOKEN = os.getenv('TELEGRAM_BOT_TOKEN')
 TELEGRAM_CHAT_ID = os.getenv('TELEGRAM_CHAT_ID')
-CSV_URL = os.getenv('CSV_EXPORT_URL')
-if not TELEGRAM_BOT_TOKEN:
-    print("❌ TELEGRAM_BOT_TOKEN is missing!")
-
-if not CSV_URL:
-    print("❌ CSV_EXPORT_URL is missing!")
-
-print("✅ Secrets loaded into environment")
+SHEET_VIEW_URL = os.getenv('SHEET_VIEW_URL')  # This should be the view-only URL (with edit#gid=...)
 
 cells_to_monitor = {
-    'C57': (56, 2, 'Strawberry Kiwi'),
-    'C59': (58, 2, 'Tie Guan Yin'),
-    'C60': (59, 2, 'Watermelon'),
+    'C57': 'Strawberry Kiwi',
+    'C59': 'Tie Guan Yin',
+    'C60': 'Watermelon',
 }
 
 status_emojis = {
@@ -28,7 +21,6 @@ status_emojis = {
     'OUT OF STOCK': '🔴'
 }
 
-# Load last known values from status.json
 status_file = 'status.json'
 if os.path.exists(status_file):
     with open(status_file, 'r') as f:
@@ -38,44 +30,52 @@ else:
 
 bot = Bot(token=TELEGRAM_BOT_TOKEN)
 
-def check_sheet():
+def fetch_html_cells():
+    headers = {
+        "User-Agent": "Mozilla/5.0"
+    }
+    response = requests.get(SHEET_VIEW_URL, headers=headers)
+    soup = BeautifulSoup(response.text, 'html.parser')
+
+    cell_data = {}
+    for cell in cells_to_monitor:
+        match = soup.find(text=re.compile(f'{cell}', re.IGNORECASE))
+        if match:
+            cell_data[cell] = match.strip().upper()
+        else:
+            cell_data[cell] = None
+    return cell_data
+
+def check_changes():
     global last_values
     try:
-        headers = {
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"
-        }
-        response = requests.get(CSV_URL, headers=headers)
-        data = pd.read_csv(StringIO(response.text), header=None)
-        print("✅ CSV shape:", data.shape)
-        print(data.head(10))
-
+        current_data = fetch_html_cells()
         updates = []
 
-        for cell, (row, col, product_name) in cells_to_monitor.items():
-            raw_value = str(data.iloc[row, col]).strip().upper()
-            current_value = raw_value.split()[0] if raw_value else ''
+        for cell, product_name in cells_to_monitor.items():
+            current_value = current_data[cell].split()[0] if current_data[cell] else ''
             emoji = status_emojis.get(current_value, '❔')
 
             if current_value != last_values.get(cell):
                 updates.append(
-                    f"🔔 *Status change for {product_name}*\n"
-                    f"Previous: `{last_values.get(cell)}`\n"
+                    f"🔔 *Status change for {product_name}*
+"
+                    f"Previous: `{last_values.get(cell)}`
+"
                     f"Now: {emoji} *{current_value}*"
                 )
                 last_values[cell] = current_value
 
-        # ✅ Always save the status file (even if no updates)
-        with open(status_file, 'w') as f:
-            json.dump(last_values, f, indent=2)
-
-        # Only send alert if there were changes
         if updates:
             bot.send_message(chat_id=TELEGRAM_CHAT_ID, text="\n\n".join(updates), parse_mode='Markdown')
 
+        with open(status_file, 'w') as f:
+            json.dump(last_values, f, indent=2)
+
     except Exception as e:
-        print(f"Error fetching sheet: {e}")
+        print(f"Error scraping sheet: {e}")
 
 if __name__ == "__main__":
     from time import strftime
     print(f"📡 Checking for status changes at {strftime('%Y-%m-%d %H:%M:%S')}")
-    check_sheet()
+    check_changes()
