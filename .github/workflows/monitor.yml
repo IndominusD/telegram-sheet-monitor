@@ -1,4 +1,4 @@
-name: Monitor Google Sheet
+name: Monitor Google Sheet with Playwright
 
 on:
   schedule:
@@ -12,31 +12,32 @@ jobs:
       contents: write
 
     steps:
-    - name: Checkout main branch
+    - name: 📥 Checkout repo
       uses: actions/checkout@v4
       with:
         ref: main
 
-    - name: Set up Python
+    - name: 🐍 Set up Python
       uses: actions/setup-python@v5
       with:
         python-version: '3.11'
 
-    - name: Install dependencies
-      run: pip install -r requirements.txt
+    - name: 📦 Install dependencies
+      run: |
+        pip install -r requirements.txt
+        python -m playwright install --with-deps chromium
 
-    - name: Run monitor script
+    - name: 🚦 Run monitor script
       env:
         TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
         TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
-        CSV_EXPORT_URL: ${{ secrets.CSV_EXPORT_URL }}
         SHEET_VIEW_URL: ${{ secrets.SHEET_VIEW_URL }}
       run: python monitor.py
 
-    - name: Commit status file
+    - name: 💾 Commit status updates
       run: |
         git config user.name "github-actions"
         git config user.email "actions@github.com"
         git add status.json
-        git commit -m "Update status.json" || echo "No changes to commit"
+        git diff --cached --quiet || git commit -m "Update status.json"
         git push
