@@ -38,7 +38,7 @@ This Python bot monitors specific cells in a public Google Sheet and sends Teleg
 
 ## 🤖 Automated Deployment via GitHub Actions
 
-This project runs **automatically every 5 minutes** with GitHub Actions.
+This project runs **automatically every 5 minutes** with GitHub Actions!
 
 ### 🔧 Setup:
 
