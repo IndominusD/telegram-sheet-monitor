@@ -28,6 +28,7 @@ This Python bot monitors specific cells in a public Google Sheet and sends Teleg
      ```
      TELEGRAM_BOT_TOKEN=your-token
      TELEGRAM_CHAT_ID=your-chat-id
+     CSV_EXPORT_URL=your_sheet_url
      ```
 
 4. **Run the script**
