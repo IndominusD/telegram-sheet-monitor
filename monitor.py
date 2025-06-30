@@ -8,6 +8,13 @@ import json
 TELEGRAM_BOT_TOKEN = os.getenv('TELEGRAM_BOT_TOKEN')
 TELEGRAM_CHAT_ID = os.getenv('TELEGRAM_CHAT_ID')
 CSV_URL = os.getenv('CSV_EXPORT_URL')
+if not TELEGRAM_BOT_TOKEN:
+    print("❌ TELEGRAM_BOT_TOKEN is missing!")
+
+if not CSV_URL:
+    print("❌ CSV_EXPORT_URL is missing!")
+
+print("✅ Secrets loaded into environment")
 
 cells_to_monitor = {
     'C57': (56, 2, 'Strawberry Kiwi'),
