@@ -24,11 +24,6 @@ status_emojis = {
 }
 
 status_file = "status.json"
-if os.path.exists(status_file):
-    with open(status_file, "r") as f:
-        last_values = json.load(f)
-else:
-    last_values = {cell: None for cell in cells_to_monitor}
 
 bot = Bot(token=TELEGRAM_BOT_TOKEN)
 
@@ -104,8 +99,14 @@ async def fetch_statuses():
             return {cell: None for cell in cells_to_monitor}
 
 async def check_changes():
-    global last_values
     print("📡 Launching headless browser...")
+    status_file = "status.json"
+    if os.path.exists(status_file):
+        with open(status_file, "r") as f:
+            last_values = json.load(f)
+    else:
+        last_values = {cell: None for cell in cells_to_monitor}
+        
     try:
         current_data = await fetch_statuses()
 
