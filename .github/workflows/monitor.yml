@@ -41,3 +41,10 @@ jobs:
         git add status.json
         git diff --cached --quiet || git commit -m "Update status.json"
         git push
+
+    - name: 📤 Upload screenshot if exists
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: debug-screenshot
+        path: debug.png
