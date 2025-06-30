@@ -52,7 +52,7 @@ async def fetch_statuses():
         found = {}
         for cell, product in cells_to_monitor.items():
             try:
-                locator = page.locator(f'text="{product}"')
+                locator = page.locator(f'text-matches("{product}", "i")')
                 element = await locator.first.element_handle()
                 if element:
                     # Get surrounding text (simulate "cell row")
