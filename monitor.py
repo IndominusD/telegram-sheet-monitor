@@ -57,6 +57,11 @@ def check_changes():
     global last_values
     try:
         current_data = fetch_html_cells()
+        print("📋 Current scraped statuses:")
+        for cell, product_name in cells_to_monitor.items():
+            raw = current_data[cell]
+            preview = raw if raw else "❌ Not found"
+            print(f"  {cell} ({product_name}): {preview}")
         updates = []
 
         for cell, product_name in cells_to_monitor.items():
