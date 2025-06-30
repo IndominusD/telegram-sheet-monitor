@@ -42,6 +42,9 @@ def fetch_html_cells():
     cell_data = {}
     # Search all divs with aria-label
     cell_divs = soup.find_all("div", attrs={"aria-label": True})
+    print("🔍 Found aria-labels:")
+    for div in cell_divs[:50]:  # limit to first 50 for sanity
+        print("-", div["aria-label"])
 
     for cell, product_name in cells_to_monitor.items():
         matched = None
