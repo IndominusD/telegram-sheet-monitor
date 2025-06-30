@@ -3,6 +3,8 @@ import json
 import os
 from telegram import Bot
 from playwright.async_api import async_playwright
+from PIL import Image
+import pytesseract
 
 TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
@@ -51,30 +53,35 @@ async def fetch_statuses():
             await browser.close()
             return {cell: None for cell in cells_to_monitor}
 
-        found = {}
-        # Extract all visible text
-        visible_text = await page.evaluate("() => document.body.innerText")
-        lines = visible_text.upper().splitlines()
-
-        for cell, product in cells_to_monitor.items():
-            matched_status = None
-            for line in lines:
-                if product.upper() in line:
-                    for status in status_emojis:
-                        if status in line:
-                            matched_status = status
-                            break
-                    if matched_status:
-                        break
-            if matched_status:
-                found[cell] = matched_status
-                print(f"🔍 Matched '{product}' → {matched_status}")
-            else:
-                found[cell] = None
-                print(f"❌ Could not find product '{product}'")
-
         await browser.close()
-        return found
+
+        # 🔠 OCR fallback
+        try:
+            ocr_text = pytesseract.image_to_string(Image.open("debug.png")).upper()
+            lines = ocr_text.splitlines()
+
+            found = {}
+            for cell, product in cells_to_monitor.items():
+                matched_status = None
+                for line in lines:
+                    if product.upper() in line:
+                        for status in status_emojis:
+                            if status in line:
+                                matched_status = status
+                                break
+                        if matched_status:
+                            break
+                if matched_status:
+                    found[cell] = matched_status
+                    print(f"🧠 OCR matched '{product}' → {matched_status}")
+                else:
+                    found[cell] = None
+                    print(f"❌ OCR could not find '{product}'")
+            return found
+
+        except Exception as e:
+            print(f"❌ OCR error: {e}")
+            return {cell: None for cell in cells_to_monitor}
 
 async def check_changes():
     global last_values
