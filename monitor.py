@@ -11,9 +11,9 @@ TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
 SHEET_VIEW_URL = os.getenv("SHEET_VIEW_URL")
 
 cells_to_monitor = {
-    "C57": "KIWI",
-    "C59": "TIE GUAN YIN",
-    "C60": "WATERMELON",
+    "C57": "STRAWBERRY KIWI (FROZEN)",
+    "C59": "TIE GUAN YIN (FROZEN)",
+    "C60": "WATERMELON (FROZEN)",
 }
 
 status_emojis = {
@@ -55,18 +55,33 @@ async def fetch_statuses():
 
         await browser.close()
 
-        # 🔠 OCR fallback
+        # 🔠 OCR fallback with correction
         try:
             ocr_text = pytesseract.image_to_string(Image.open("debug.png")).upper()
+
+            # Save raw OCR text for debug
             with open("ocr_output.txt", "w") as f:
                 f.write(ocr_text)
+
+            # Fix common OCR mistakes
+            corrections = {
+                "AMALABBLE": "AVAILABLE",
+                "AVAIT": "AVAILABLE",
+                "AVALABLE": "AVAILABLE",
+                "AVALABBLE": "AVAILABLE",
+                "QEEEENAVAILABLET": "AVAILABLE",
+                "OUTOFSTOCK": "OUT OF STOCK"
+            }
+            for wrong, right in corrections.items():
+                ocr_text = ocr_text.replace(wrong, right)
+
             lines = ocr_text.splitlines()
 
             found = {}
             for cell, product in cells_to_monitor.items():
                 matched_status = None
                 for line in lines:
-                    if product.upper() in line:
+                    if product in line:
                         for status in status_emojis:
                             if status in line:
                                 matched_status = status
