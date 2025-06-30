@@ -22,7 +22,12 @@ jobs:
       with:
         python-version: '3.11'
 
-    - name: 📦 Install dependencies
+    - name: 🔧 Install Tesseract OCR
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y tesseract-ocr
+
+    - name: 📦 Install Python dependencies and Playwright
       run: |
         pip install -r requirements.txt
         python -m playwright install --with-deps chromium
