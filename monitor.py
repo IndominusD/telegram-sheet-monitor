@@ -37,7 +37,17 @@ async def fetch_statuses():
         try:
             await page.goto(SHEET_VIEW_URL, wait_until="domcontentloaded", timeout=60000)
             await page.wait_for_timeout(5000)
+                # ⬇️ Scroll the page to reveal rows near C60
+            await page.keyboard.press("PageDown")
+            await page.wait_for_timeout(1000)
+            await page.keyboard.press("PageDown")
+            await page.wait_for_timeout(1000)
+            await page.keyboard.press("PageDown")
+            await page.wait_for_timeout(1000)
+            await page.keyboard.press("PageDown")
+            await page.wait_for_timeout(3000)
             await page.screenshot(path="debug.png", full_page=True)
+            print("📸 Screenshot after scroll saved as debug.png")
         except Exception as e:
             print(f"❌ Failed to load sheet: {e}")
             await browser.close()
